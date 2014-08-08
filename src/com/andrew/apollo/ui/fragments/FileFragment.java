@@ -38,6 +38,7 @@ import com.andrew.apollo.menu.CreateNewPlaylist;
 import com.andrew.apollo.menu.FragmentMenuItems;
 import com.andrew.apollo.recycler.RecycleHolder;
 import com.andrew.apollo.utils.MusicUtils;
+import com.devspark.appmsg.AppMsg;
 
 import java.io.File;
 
@@ -229,7 +230,7 @@ public class FileFragment extends Fragment implements OnItemClickListener {
                 buildDeleteDialog().show();
                 return true;
             default:
-                if (item.getGroupId() == FILE_GROUP_ID && mSelectedIdList != null) {
+                if (item.getGroupId() == FILE_GROUP_ID && mSelectedIdList.length > 0) {
                     switch (item.getItemId()) {
                         case FragmentMenuItems.PLAY_NEXT:
                             MusicUtils.playNext(mSelectedIdList);
@@ -255,9 +256,12 @@ public class FileFragment extends Fragment implements OnItemClickListener {
         File file = mAdapter.getItem(position);
 
         if (file.isDirectory()) {
-            mDirectory = file;
-            mAdapter.changeDirectory(mDirectory);
-            mListView.setSelection(0);
+            if (file.canExecute() && file.canRead()) {
+                mDirectory = file;
+                mAdapter.changeDirectory(mDirectory);
+                mListView.setSelection(0);
+            } else
+                AppMsg.makeText(getActivity(), R.string.permission_denied, AppMsg.STYLE_ALERT).show();
         } else {
             long mSelectedIdList[] = MusicUtils.getSongListFromFile(getActivity(),
                     file);
@@ -272,9 +276,10 @@ public class FileFragment extends Fragment implements OnItemClickListener {
                 .setPositiveButton(R.string.context_menu_delete, new DialogInterface.OnClickListener() {
                     @Override
                     public void onClick(final DialogInterface dialog, final int which) {
-                        // TODO: alert on error
-                        mFile.delete();
-                        mAdapter.refresh();
+                        if (mFile.delete())
+                            mAdapter.refresh();
+                        else
+                            AppMsg.makeText(getActivity(), R.string.cannot_delete, AppMsg.STYLE_ALERT).show();
                     }
                 }).setNegativeButton(R.string.cancel, new DialogInterface.OnClickListener() {
                     @Override
