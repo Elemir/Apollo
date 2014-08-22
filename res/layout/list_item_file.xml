@@ -22,7 +22,7 @@
     android:orientation="horizontal"
     android:gravity="center_vertical" >
 
-    <android.widget.ImageView
+    <com.andrew.apollo.widgets.ShowHideImageView
         android:id="@+id/image"
         android:layout_width="wrap_content"
         android:layout_height="@dimen/item_normal_height"
