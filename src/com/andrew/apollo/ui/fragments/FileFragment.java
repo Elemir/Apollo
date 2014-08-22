@@ -13,9 +13,9 @@ package com.andrew.apollo.ui.fragments;
 
 import android.app.Activity;
 import android.app.AlertDialog;
-import android.content.Context;
+import android.support.v4.app.LoaderManager;
+import android.support.v4.content.Loader;
 import android.content.DialogInterface;
-import android.os.AsyncTask;
 import android.os.Bundle;
 import android.os.Environment;
 import android.support.v4.app.Fragment;
@@ -34,8 +34,10 @@ import android.widget.ListView;
 
 import com.andrew.apollo.R;
 import com.andrew.apollo.adapters.FileAdapter;
+import com.andrew.apollo.loaders.FileLoader;
 import com.andrew.apollo.menu.CreateNewPlaylist;
 import com.andrew.apollo.menu.FragmentMenuItems;
+import com.andrew.apollo.model.FileList;
 import com.andrew.apollo.recycler.RecycleHolder;
 import com.andrew.apollo.utils.MusicUtils;
 import com.devspark.appmsg.AppMsg;
@@ -47,12 +49,15 @@ import java.io.File;
  * 
  * @author Evgeny Omelchenko (elemir90@gmail.com)
  */
-public class FileFragment extends Fragment implements OnItemClickListener {
+public class FileFragment extends Fragment implements OnItemClickListener,
+        LoaderManager.LoaderCallbacks<FileList>{
     /**
      * Used to keep context menu items from bleeding into other fragments
      */
     private static final int FILE_GROUP_ID = 6;
     private static final int DIR_GROUP_ID = 7;
+
+    private static final int LOADER = 0;
 
     /**
      * Fragment UI
@@ -70,10 +75,14 @@ public class FileFragment extends Fragment implements OnItemClickListener {
     private ListView mListView;
 
     /**
-     * Current directory and selected file
+     * Selected file
      */
-    private File mDirectory, mFile;
+    private File mFile;
 
+    /**
+     * Path to current directory
+     */
+    private String mPath;
 
     /**
      * Empty constructor as per the {@link android.support.v4.app.Fragment} documentation
@@ -94,17 +103,16 @@ public class FileFragment extends Fragment implements OnItemClickListener {
      */
     @Override
     public void onCreate(final Bundle savedInstanceState) {
-        String curDirectory;
         super.onCreate(savedInstanceState);
         // Create the adapter
         mAdapter = new FileAdapter(getActivity());
 
-        if (savedInstanceState != null
-                && (curDirectory = savedInstanceState.getString("curDirectory")) != null)
-            mDirectory = new File (curDirectory);
-        else
-            mDirectory = Environment.getExternalStorageDirectory();
-        mAdapter.changeDirectory(mDirectory);
+        if (savedInstanceState != null)
+            mPath = savedInstanceState.getString("curDirectory");
+        if (mPath == null)
+            mPath = Environment.getExternalStorageDirectory().getAbsolutePath();
+
+        getLoaderManager().restartLoader(LOADER, null, this);
     }
 
     /**
@@ -113,7 +121,7 @@ public class FileFragment extends Fragment implements OnItemClickListener {
     @Override
     public void onSaveInstanceState(Bundle outState) {
         super.onSaveInstanceState(outState);
-        outState.putString("curDirectory", mDirectory.getAbsolutePath());
+        outState.putString("curDirectory", mPath);
     }
 
     /**
@@ -134,6 +142,7 @@ public class FileFragment extends Fragment implements OnItemClickListener {
         mListView.setOnCreateContextMenuListener(this);
         // Play the selected song
         mListView.setOnItemClickListener(this);
+
         return mRootView;
     }
 
@@ -257,9 +266,8 @@ public class FileFragment extends Fragment implements OnItemClickListener {
 
         if (file.isDirectory()) {
             if (file.canExecute() && file.canRead()) {
-                mDirectory = file;
-                mAdapter.changeDirectory(mDirectory);
-                mListView.setSelection(0);
+                mPath = file.getAbsolutePath();
+                getLoaderManager().restartLoader(LOADER, null, this);
             } else
                 AppMsg.makeText(getActivity(), R.string.permission_denied, AppMsg.STYLE_ALERT).show();
         } else {
@@ -271,13 +279,14 @@ public class FileFragment extends Fragment implements OnItemClickListener {
     }
 
     private final AlertDialog buildDeleteDialog() {
+        final FileFragment fragment = this;
         return new AlertDialog.Builder(getActivity())
                 .setTitle(getString(R.string.delete_dialog_title, mFile.getName()))
                 .setPositiveButton(R.string.context_menu_delete, new DialogInterface.OnClickListener() {
                     @Override
                     public void onClick(final DialogInterface dialog, final int which) {
                         if (mFile.delete())
-                            mAdapter.refresh();
+                            getLoaderManager().restartLoader(LOADER, null, fragment);
                         else
                             AppMsg.makeText(getActivity(), R.string.cannot_delete, AppMsg.STYLE_ALERT).show();
                     }
@@ -287,5 +296,21 @@ public class FileFragment extends Fragment implements OnItemClickListener {
                         dialog.dismiss();
                     }
                 }).setMessage(R.string.cannot_be_undone).create();
+    }
+
+    @Override
+    public Loader<FileList> onCreateLoader(int i, Bundle bundle) {
+        return new FileLoader(getActivity(), mPath);
+    }
+
+    @Override
+    public void onLoadFinished(Loader<FileList> loader, FileList data) {
+        mAdapter.setListItems(data);
+        mAdapter.notifyDataSetChanged();
+        mListView.setSelection(0);
+    }
+
+    @Override
+    public void onLoaderReset(Loader<FileList> loader) {
     }
 }

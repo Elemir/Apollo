@@ -12,6 +12,8 @@
 package com.andrew.apollo.adapters;
 
 import android.content.Context;
+import android.graphics.Bitmap;
+import android.graphics.BitmapFactory;
 import android.os.FileObserver;
 import android.os.Handler;
 import android.util.Log;
@@ -21,6 +23,7 @@ import android.view.ViewGroup;
 import android.widget.BaseAdapter;
 
 import com.andrew.apollo.R;
+import com.andrew.apollo.model.FileList;
 import com.andrew.apollo.ui.MusicHolder;
 
 import java.io.File;
@@ -35,58 +38,38 @@ import java.util.List;
  * @author Evgeny Omelchenko (elemir90@gmail.com)
  */
 public class FileAdapter extends BaseAdapter {
-
     /**
      * Number of views (TextView)
      */
     private static final int VIEW_TYPE_COUNT = 1;
     /**
      * The resource Id of the layout to inflate
+    */
+    private static final int mLayoutId = R.layout.list_item_file;
+    /**
+     * Cache of folder icon bitmap
      */
-    private final int mLayoutId = R.layout.list_item_file;
+    private final Bitmap mFolderIcon;
     /**
      * Link to saved context
      */
     private final Context mContext;
     /**
-     * Current directory and his parent
-     */
-    private File mDirectory, mParentDirectory;
-    /**
      *
      */
-    private int mHasParentDirectory;
-    /**
-     * Containers for directories and files
-     */
-    private List<File> mDirectories, mFiles;
-    /**
-     * The Observer instance for the current directory.
-     */
-    private Observer mFileObserver;
-    /**
-     * Refresh handler
-     */
-    private Handler mRefreshHandler;
+    private FileList mData;
 
     /**
      * Constructor of <code>FileAdapter</code>
      *
      * @param context The {@link android.content.Context} to use.
-     * @param layoutId The resource Id of the view to inflate.
      */
     public FileAdapter(final Context context) {
         super();
         // Save context
         mContext = context;
-        // Initialize lists
-        mDirectories = new ArrayList<File>();
-        mFiles = new ArrayList<File>();
-        mRefreshHandler = new Handler() {
-            public void handleMessage(android.os.Message msg) {
-                refresh();
-            }
-        };
+        mFolderIcon = BitmapFactory.decodeResource(mContext.getResources(),
+                R.drawable.ic_folder);
     }
 
     /**
@@ -94,7 +77,9 @@ public class FileAdapter extends BaseAdapter {
      */
     @Override
     public int getCount() {
-        return mDirectories.size() + mFiles.size() + mHasParentDirectory;
+        if (mData != null)
+            return mData.size();
+        else return 0;
     }
 
     /**
@@ -102,12 +87,9 @@ public class FileAdapter extends BaseAdapter {
      */
     @Override
     public File getItem(int i) {
-        if (i == 0 && mHasParentDirectory == 1)
-            return mParentDirectory;
-        else if (i < mDirectories.size() + mHasParentDirectory)
-            return mDirectories.get(i - mHasParentDirectory);
-        else
-            return mFiles.get(i - mDirectories.size() - mHasParentDirectory);
+        if (mData != null)
+            return mData.get(i);
+        else return null;
     }
 
     /**
@@ -124,7 +106,6 @@ public class FileAdapter extends BaseAdapter {
     @Override
     public View getView(final int position, View convertView, final ViewGroup parent) {
         MusicHolder holder;
-        final boolean isDirectory = position < mDirectories.size() + mHasParentDirectory;
 
         if (convertView == null) {
             convertView = LayoutInflater.from(mContext).inflate(mLayoutId, parent, false);
@@ -134,18 +115,19 @@ public class FileAdapter extends BaseAdapter {
             holder = (MusicHolder)convertView.getTag();
         }
 
-        if (isDirectory) {
+        if (mData.get(position).isDirectory()) {
+            holder.mImage.get().setImageBitmap(mFolderIcon);
             holder.mImage.get().setVisibility(View.VISIBLE);
-            holder.mImage.get().setImageResource(R.drawable.ic_folder);
         } else
             holder.mImage.get().setVisibility(View.GONE);
 
-        if (mHasParentDirectory == 1 && position == 0)
-            holder.mLineOne.get().setText("..");
-        else
-            holder.mLineOne.get().setText(getItem(position).getName());
+        holder.mLineOne.get().setText(mData.getDisplayName(position));
 
         return convertView;
+    }
+
+    public void setListItems(FileList data) {
+        mData = data;
     }
 
     /**
@@ -162,52 +144,5 @@ public class FileAdapter extends BaseAdapter {
     @Override
     public int getViewTypeCount() {
         return VIEW_TYPE_COUNT;
-    }
-
-
-    /**
-     * {@inheritDoc}
-     */
-    public final void changeDirectory(File directory) {
-        mDirectory = directory;
-        mParentDirectory = mDirectory.getParentFile();
-        mHasParentDirectory = (mParentDirectory != null ? 1 : 0);
-        mFileObserver = new Observer(mDirectory.getPath());
-        refresh();
-    }
-
-    /**
-     * {@inheritDoc}
-     */
-    public final void refresh() {
-        File files[] = mDirectory.listFiles();
-        mDirectories.clear();
-        mFiles.clear();
-
-        Arrays.sort(files);
-
-        for (File file: files) {
-            if (file.isDirectory())
-                mDirectories.add(file);
-            else mFiles.add(file);
-        }
-        notifyDataSetChanged();
-    }
-
-    /**
-     * FileObserver that reloads the files in this adapter.
-     */
-    private class Observer extends FileObserver {
-        public Observer(String path)
-        {
-            super(path, FileObserver.CREATE | FileObserver.DELETE | FileObserver.MOVED_TO | FileObserver.MOVED_FROM);
-            startWatching();
-        }
-
-        @Override
-        public void onEvent(int event, String path)
-        {
-            mRefreshHandler.sendEmptyMessage(0);
-        }
     }
 }
