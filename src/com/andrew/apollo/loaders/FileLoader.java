@@ -11,6 +11,7 @@
 
 package com.andrew.apollo.loaders;
 
+import android.os.Environment;
 import android.support.v4.content.AsyncTaskLoader;
 import android.content.Context;
 import android.os.FileObserver;
@@ -48,7 +49,7 @@ public class FileLoader extends AsyncTaskLoader<FileList> {
         FileList result;
 
         if (!directory.isDirectory())
-            return null;
+            directory = Environment.getExternalStorageDirectory();
 
         result = new FileList();
         result.changeDirectory(directory);
