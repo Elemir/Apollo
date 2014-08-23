@@ -85,6 +85,11 @@ public class FileFragment extends Fragment implements OnItemClickListener,
     private String mPath;
 
     /**
+     * To restore a current position
+     */
+    private int mPosition;
+
+    /**
      * Empty constructor as per the {@link android.support.v4.app.Fragment} documentation
      */
     public FileFragment() {
@@ -107,8 +112,10 @@ public class FileFragment extends Fragment implements OnItemClickListener,
         // Create the adapter
         mAdapter = new FileAdapter(getActivity());
 
-        if (savedInstanceState != null)
+        if (savedInstanceState != null) {
+            mPosition = savedInstanceState.getInt("fileListPosition");
             mPath = savedInstanceState.getString("curDirectory");
+        }
         if (mPath == null)
             mPath = Environment.getExternalStorageDirectory().getAbsolutePath();
 
@@ -122,6 +129,7 @@ public class FileFragment extends Fragment implements OnItemClickListener,
     public void onSaveInstanceState(Bundle outState) {
         super.onSaveInstanceState(outState);
         outState.putString("curDirectory", mPath);
+        outState.putInt("fileListPosition", mListView.getFirstVisiblePosition());
     }
 
     /**
@@ -307,7 +315,7 @@ public class FileFragment extends Fragment implements OnItemClickListener,
     public void onLoadFinished(Loader<FileList> loader, FileList data) {
         mAdapter.setListItems(data);
         mAdapter.notifyDataSetChanged();
-        mListView.setSelection(0);
+        mListView.setSelection(mPosition);
     }
 
     @Override
