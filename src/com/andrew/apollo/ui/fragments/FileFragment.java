@@ -40,6 +40,9 @@ import com.andrew.apollo.menu.FragmentMenuItems;
 import com.andrew.apollo.model.FileList;
 import com.andrew.apollo.recycler.RecycleHolder;
 import com.andrew.apollo.utils.MusicUtils;
+import com.andrew.apollo.widgets.Breadcrumb;
+import com.andrew.apollo.widgets.BreadcrumbItem;
+import com.andrew.apollo.widgets.BreadcrumbView;
 import com.devspark.appmsg.AppMsg;
 
 import java.io.File;
@@ -50,7 +53,7 @@ import java.io.File;
  * @author Evgeny Omelchenko (elemir90@gmail.com)
  */
 public class FileFragment extends Fragment implements OnItemClickListener,
-        LoaderManager.LoaderCallbacks<FileList>{
+        LoaderManager.LoaderCallbacks<FileList>, BreadcrumbView.BreadcrumbListener {
     /**
      * Used to keep context menu items from bleeding into other fragments
      */
@@ -74,6 +77,10 @@ public class FileFragment extends Fragment implements OnItemClickListener,
      */
     private ListView mListView;
 
+    /**
+     * Breadcrumb
+     */
+    private Breadcrumb mBreadcrumb;
     /**
      * Selected file
      */
@@ -139,7 +146,10 @@ public class FileFragment extends Fragment implements OnItemClickListener,
     public View onCreateView(final LayoutInflater inflater, final ViewGroup container,
             final Bundle savedInstanceState) {
         // The View for the fragment's UI
-        mRootView = (ViewGroup)inflater.inflate(R.layout.list_base, null);
+        mRootView = (ViewGroup)inflater.inflate(R.layout.list_breadcrumb, null);
+        // Initialize the breadcrumb
+        mBreadcrumb = (Breadcrumb)mRootView.findViewById(R.id.breadcrumb_bar);
+        mBreadcrumb.addBreadcrumbListener(this);
         // Initialize the list
         mListView = (ListView)mRootView.findViewById(R.id.list_base);
         // Set the data behind the list
@@ -316,9 +326,16 @@ public class FileFragment extends Fragment implements OnItemClickListener,
         mAdapter.setListItems(data);
         mAdapter.notifyDataSetChanged();
         mListView.setSelection(mPosition);
+        mBreadcrumb.changeBreadcrumbPath(mPath);
     }
 
     @Override
     public void onLoaderReset(Loader<FileList> loader) {
+    }
+
+    @Override
+    public void onBreadcrumbItemClick(BreadcrumbItem item) {
+        mPath = item.getItemPath();
+        getLoaderManager().restartLoader(LOADER, null, this);
     }
 }
