@@ -568,7 +568,8 @@ public final class MusicUtils {
         final String request = MediaStore.Audio.AudioColumns.DATA + " LIKE '" + file.getAbsolutePath() + "%'";
         final Uri audiosUri = MediaStore.Audio.Media.getContentUri("external");
 
-        Cursor cursor = context.getContentResolver().query(audiosUri, projection, request, null, null);
+        Cursor cursor = context.getContentResolver().query(audiosUri, projection, request, null,
+                MediaStore.Audio.AudioColumns.DATA);
 
         if (cursor != null) {
             final long[] mList = getSongListForCursor(cursor);
