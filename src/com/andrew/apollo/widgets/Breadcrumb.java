@@ -25,8 +25,9 @@ public interface Breadcrumb {
      * Method that changes the path of the breadcrumb.
      *
      * @param newPath The new path
+     * @param isChrooted Using of chrooted environment
      */
-    void changeBreadcrumbPath(final String newPath);
+    void changeBreadcrumbPath(final String newPath, boolean isChrooted);
 
     /**
      * Method that adds a new breadcrumb listener.

@@ -13,6 +13,8 @@ package com.andrew.apollo.model;
 
 import android.util.Log;
 
+import com.andrew.apollo.utils.StorageUtils;
+
 import java.io.File;
 import java.util.AbstractList;
 import java.util.ArrayList;
@@ -48,7 +50,7 @@ public class FileList extends AbstractList<File> {
         File files[] = directory.listFiles();
 
         mCurrentDirectory = directory;
-        mParentDirectory = mCurrentDirectory.getParentFile();
+        mParentDirectory = StorageUtils.getChrootedParentFile(mCurrentDirectory);
         mHasParentDirectory = (mParentDirectory != null ? 1 : 0);
 
         mDirectories.clear();
