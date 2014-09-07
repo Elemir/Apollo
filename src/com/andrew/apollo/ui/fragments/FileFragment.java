@@ -40,6 +40,7 @@ import com.andrew.apollo.menu.FragmentMenuItems;
 import com.andrew.apollo.model.FileList;
 import com.andrew.apollo.recycler.RecycleHolder;
 import com.andrew.apollo.utils.MusicUtils;
+import com.andrew.apollo.utils.StorageUtils;
 import com.andrew.apollo.widgets.Breadcrumb;
 import com.andrew.apollo.widgets.BreadcrumbItem;
 import com.andrew.apollo.widgets.BreadcrumbView;
@@ -123,6 +124,7 @@ public class FileFragment extends Fragment implements OnItemClickListener,
             mPosition = savedInstanceState.getInt("fileListPosition");
             mPath = savedInstanceState.getString("curDirectory");
         }
+
         if (mPath == null)
             mPath = Environment.getExternalStorageDirectory().getAbsolutePath();
 
@@ -186,7 +188,6 @@ public class FileFragment extends Fragment implements OnItemClickListener,
         final AdapterContextMenuInfo info = (AdapterContextMenuInfo)menuInfo;
 
         mFile = mAdapter.getItem(info.position);
-
 
         if (mFile.isDirectory()) {
             // Play the directory content
@@ -283,10 +284,9 @@ public class FileFragment extends Fragment implements OnItemClickListener,
         File file = mAdapter.getItem(position);
 
         if (file.isDirectory()) {
-            if (file.canExecute() && file.canRead()) {
-                mPath = file.getAbsolutePath();
-                getLoaderManager().restartLoader(LOADER, null, this);
-            } else
+            if (file.canExecute() && file.canRead())
+                changeDirectory(file.getAbsolutePath());
+            else
                 AppMsg.makeText(getActivity(), R.string.permission_denied, AppMsg.STYLE_ALERT).show();
         } else {
             long mSelectedIdList[] = MusicUtils.getSongListFromFile(getActivity(),
@@ -323,10 +323,24 @@ public class FileFragment extends Fragment implements OnItemClickListener,
 
     @Override
     public void onLoadFinished(Loader<FileList> loader, FileList data) {
+        String chrootedPath = StorageUtils.getChrootedPath(mPath);
         mAdapter.setListItems(data);
         mAdapter.notifyDataSetChanged();
-        mListView.setSelection(mPosition);
-        mBreadcrumb.changeBreadcrumbPath(mPath);
+
+        mListView.clearFocus();
+        mListView.post(new Runnable() {
+            @Override
+            public void run() {
+                mListView.requestFocusFromTouch();
+                mListView.setSelection(mPosition);
+                mListView.requestFocus();
+            }
+        });
+
+        if (chrootedPath != null)
+            mBreadcrumb.changeBreadcrumbPath(chrootedPath, true);
+        else
+            mBreadcrumb.changeBreadcrumbPath(mPath, false);
     }
 
     @Override
@@ -335,7 +349,12 @@ public class FileFragment extends Fragment implements OnItemClickListener,
 
     @Override
     public void onBreadcrumbItemClick(BreadcrumbItem item) {
-        mPath = item.getItemPath();
+        changeDirectory(item.getItemPath());
+    }
+
+    private void changeDirectory(String path) {
+        mPath = path;
+        mPosition = 0;
         getLoaderManager().restartLoader(LOADER, null, this);
     }
 }

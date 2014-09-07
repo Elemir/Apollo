@@ -17,6 +17,7 @@
 package  com.andrew.apollo.widgets;
 
 import android.content.Context;
+import android.os.Environment;
 import android.util.AttributeSet;
 import android.util.Log;
 import android.view.LayoutInflater;
@@ -30,7 +31,6 @@ import com.andrew.apollo.R;
 
 import java.io.File;
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
 
@@ -119,14 +119,15 @@ public class BreadcrumbView extends RelativeLayout implements Breadcrumb,
      * {@inheritDoc}
      */
     @Override
-    public void changeBreadcrumbPath(final String newPath) {
+    public void changeBreadcrumbPath(final String newPath, final boolean isChrooted) {
         BreadcrumbItem item = createBreadcrumbItem();
         String []dirs = newPath.split(File.separator);
-        String path = File.separator;
+        String baseName = isChrooted ? Environment.getExternalStorageDirectory().getName() : File.separator;
+        String path = isChrooted ? Environment.getExternalStorageDirectory().getAbsolutePath() : File.separator;
 
         mBreadcrumbBar.removeAllViews();
 
-        item.setText(File.separator);
+        item.setText(baseName);
         item.setItemPath(path);
         mBreadcrumbBar.addView(item);
 
